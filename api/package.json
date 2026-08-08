@@ -1,0 +1,38 @@
+{
+  "name": "budgetpal-api",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint . && tsc --noEmit",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{js,ts,mjs,json,md}\" --ignore-path ../.prettierignore",
+    "format:check": "prettier --check \"**/*.{js,ts,mjs,json,md}\" --ignore-path ../.prettierignore"
+  },
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "morgan": "^1.11.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^26.2.0",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.11",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.66.0"
+  }
+}

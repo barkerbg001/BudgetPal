@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/android
+**/ios
+**/Pods
+**/vendor
+*.lock
+package-lock.json
+.git
