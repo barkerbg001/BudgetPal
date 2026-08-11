@@ -91,3 +91,11 @@ jest.mock('@react-navigation/native-stack', () => ({
     Screen: () => null,
   }),
 }));
+
+jest.mock('react-native-confetti-cannon', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: React.forwardRef(() => null),
+  };
+});

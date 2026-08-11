@@ -20,9 +20,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { AppStackParamList } from '../navigation/types';
+import { FinanceJokeCard } from '../components/FinanceJokeCard';
 import { FinancialHealthCard } from '../components/FinancialHealthCard';
+import { GoalConfetti } from '../components/GoalConfetti';
 import { useAuthStore } from '../store/authStore';
 import { useTransactionsStore } from '../store/transactionsStore';
+import { useUiStore } from '../store/uiStore';
 import { useAppTheme } from '../theme/useAppTheme';
 import type { Transaction } from '../types/api';
 import { CATEGORY_ICONS } from '../utils/categoryIcons';
@@ -41,6 +44,7 @@ export function DashboardScreen({ navigation }: Props) {
   const fetchTransactions = useTransactionsStore(
     state => state.fetchTransactions,
   );
+  const savingsGoal = useUiStore(state => state.savingsGoal);
 
   useEffect(() => {
     fetchTransactions().catch(() => undefined);
@@ -112,6 +116,10 @@ export function DashboardScreen({ navigation }: Props) {
           <Text style={[styles.balance, { color: colors.text }]}>
             {formatBalance(balance)}
           </Text>
+          <Text style={[styles.goalHint, { color: colors.muted }]}>
+            Goal {formatBalance(savingsGoal)}
+            {balance >= savingsGoal ? ' · reached' : ''}
+          </Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -123,6 +131,7 @@ export function DashboardScreen({ navigation }: Props) {
       </View>
 
       <FinancialHealthCard balance={balance} colors={colors} />
+      <FinanceJokeCard colors={colors} />
 
       <View style={styles.listHeader}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -186,6 +195,8 @@ export function DashboardScreen({ navigation }: Props) {
           }
         />
       ) : null}
+
+      <GoalConfetti balance={balance} />
     </View>
   );
 }
@@ -222,6 +233,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.5,
     marginTop: 2,
+  },
+  goalHint: {
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '600',
   },
   settingsButton: {
     borderWidth: StyleSheet.hairlineWidth,
