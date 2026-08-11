@@ -20,6 +20,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { AppStackParamList } from '../navigation/types';
+import { FinancialHealthCard } from '../components/FinancialHealthCard';
 import { useAuthStore } from '../store/authStore';
 import { useTransactionsStore } from '../store/transactionsStore';
 import { useAppTheme } from '../theme/useAppTheme';
@@ -120,6 +121,8 @@ export function DashboardScreen({ navigation }: Props) {
           <Settings color={colors.text} size={20} strokeWidth={2} />
         </Pressable>
       </View>
+
+      <FinancialHealthCard balance={balance} colors={colors} />
 
       <View style={styles.listHeader}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
