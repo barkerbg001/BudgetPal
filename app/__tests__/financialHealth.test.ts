@@ -24,6 +24,11 @@ describe('computeFinancialHealth', () => {
 describe('getBatteryLevel fallback', () => {
   beforeEach(() => {
     NativeModules.BatteryModule = undefined;
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('returns a safe fallback when the native module is missing', async () => {
