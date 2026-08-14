@@ -13,6 +13,9 @@ import {
 import { getBatteryLevel } from '../native/battery';
 import { useUiStore } from '../store/uiStore';
 import type { ThemeColors } from '../theme/colors';
+import { getCardShadow } from '../theme/shadows';
+import { useAppTheme } from '../theme/useAppTheme';
+import { convertAmount } from '../utils/currency';
 import {
   computeFinancialHealth,
   type FinancialHealth,
@@ -22,16 +25,18 @@ import {
 type Props = {
   balance: number;
   colors: ThemeColors;
+  compact?: boolean;
 };
 
 function MascotFace({
   mood,
   color,
+  size = 36,
 }: {
   mood: MascotMood;
   color: string;
+  size?: number;
 }) {
-  const size = 36;
   if (mood === 'thriving') {
     return <Smile color={color} size={size} strokeWidth={2.2} />;
   }
@@ -52,12 +57,12 @@ function BatteryGlyph({
   color: string;
 }) {
   if (level >= 70) {
-    return <BatteryFull color={color} size={16} />;
+    return <BatteryFull color={color} size={14} />;
   }
   if (level >= 35) {
-    return <BatteryMedium color={color} size={16} />;
+    return <BatteryMedium color={color} size={14} />;
   }
-  return <BatteryLow color={color} size={16} />;
+  return <BatteryLow color={color} size={14} />;
 }
 
 function moodAccent(mood: MascotMood, colors: ThemeColors): string {
@@ -67,22 +72,32 @@ function moodAccent(mood: MascotMood, colors: ThemeColors): string {
   return colors.error;
 }
 
-export function FinancialHealthCard({ balance, colors }: Props) {
+export function FinancialHealthCard({
+  balance,
+  colors,
+  compact = false,
+}: Props) {
+  const { isDark } = useAppTheme();
   const savingsGoal = useUiStore(state => state.savingsGoal);
+  const savingsGoalCurrency = useUiStore(state => state.savingsGoalCurrency);
+  const displayCurrency = useUiStore(state => state.displayCurrency);
   const [health, setHealth] = useState<FinancialHealth | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    const goal = convertAmount(
+      savingsGoal,
+      savingsGoalCurrency,
+      displayCurrency,
+    );
 
     getBatteryLevel()
       .then(batteryLevel => {
         if (cancelled) {
           return;
         }
-        setHealth(
-          computeFinancialHealth(batteryLevel, balance, savingsGoal),
-        );
+        setHealth(computeFinancialHealth(batteryLevel, balance, goal));
       })
       .finally(() => {
         if (!cancelled) {
@@ -93,9 +108,56 @@ export function FinancialHealthCard({ balance, colors }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [balance, savingsGoal]);
+  }, [balance, displayCurrency, savingsGoal, savingsGoalCurrency]);
 
   const accent = health ? moodAccent(health.mood, colors) : colors.accent;
+
+  if (compact) {
+    return (
+      <View
+        style={[
+          styles.compactCard,
+          getCardShadow(isDark),
+          { backgroundColor: colors.card },
+        ]}>
+        {loading || !health ? (
+          <View style={styles.compactLoading}>
+            <ActivityIndicator color={colors.accent} size="small" />
+            <Text style={[styles.loadingText, { color: colors.muted }]}>
+              Checking health…
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.compactRow}>
+            <View
+              style={[
+                styles.compactMascot,
+                { backgroundColor: accent + '18' },
+              ]}>
+              <MascotFace mood={health.mood} color={accent} size={22} />
+            </View>
+            <View style={styles.compactCopy}>
+              <Text style={[styles.compactTitle, { color: colors.text }]}>
+                {health.label}
+                <Text style={{ color: colors.muted }}> · {health.score}/100</Text>
+              </Text>
+              <Text
+                style={[styles.compactMessage, { color: colors.muted }]}
+                numberOfLines={1}>
+                {health.message}
+              </Text>
+            </View>
+            <View style={styles.compactMeta}>
+              <BatteryGlyph level={health.batteryLevel} color={colors.muted} />
+              <Text style={[styles.metaText, { color: colors.muted }]}>
+                {health.batteryLevel}%
+              </Text>
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View
@@ -154,6 +216,46 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     padding: 14,
     marginBottom: 16,
+  },
+  compactCard: {
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  compactLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  compactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  compactMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  compactTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  compactMessage: {
+    fontSize: 12,
+  },
+  compactMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   loadingRow: {
     flexDirection: 'row',

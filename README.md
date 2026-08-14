@@ -125,4 +125,4 @@ BudgetPal is a compact end-to-end finance demo: an Express JWT API with seeded d
 
 - In-memory API (no DB) — fast to demo, resets on restart
 - Classic native module bridge (interop-friendly) rather than a full TurboModule codegen package
-- Joke “of the day” prefers local finance jokes; remote API is best-effort on refresh
+- Joke of the day comes from `GET /api/jokes` (icanhazdadjoke money search, with local fallbacks)

@@ -1,13 +1,15 @@
-import { API_BASE_URL } from '../config/api';
 import type {
   ApiErrorBody,
   AuthResponse,
   CreateTransactionInput,
   CreateTransactionResponse,
+  FinanceJoke,
+  Transaction,
   TransactionsResponse,
   User,
 } from '../types/api';
 import { getToken } from '../auth/secureStorage';
+import { API_BASE_URL } from '../config/api';
 
 export class ApiError extends Error {
   status: number;
@@ -109,4 +111,21 @@ export function createTransactionRequest(
     method: 'POST',
     body: input,
   });
+}
+
+export function clearTransactionsRequest(): Promise<{
+  deleted: number;
+  balance: number;
+  transactions: Transaction[];
+}> {
+  return apiRequest('/transactions', {
+    method: 'DELETE',
+  });
+}
+
+export function fetchJokeRequest(random = false): Promise<{
+  joke: FinanceJoke;
+}> {
+  const query = random ? '?random=true' : '';
+  return apiRequest(`/jokes${query}`);
 }

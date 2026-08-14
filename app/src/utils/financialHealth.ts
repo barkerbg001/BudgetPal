@@ -43,7 +43,7 @@ export function computeFinancialHealth(
       balanceScore: Math.round(balanceScore),
       mood: 'steady',
       label: 'Steady',
-      message: 'Holding up — keep stacking those rands.',
+      message: 'Holding up — keep stacking those savings.',
     };
   }
 

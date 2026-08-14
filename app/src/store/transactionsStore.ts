@@ -2,14 +2,44 @@ import { create } from 'zustand';
 
 import {
   ApiError,
+  clearTransactionsRequest,
   createTransactionRequest,
   fetchTransactions,
 } from '../api/client';
 import type { CreateTransactionInput, Transaction } from '../types/api';
+import { DEFAULT_CURRENCY, convertAmount, isCurrency } from '../utils/currency';
 import { useAuthStore } from './authStore';
 import { useUiStore } from './uiStore';
 
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+function withCurrency(tx: Transaction): Transaction {
+  return {
+    ...tx,
+    currency: isCurrency(tx.currency) ? tx.currency : DEFAULT_CURRENCY,
+  };
+}
+
+function isPendingTemp(tx: Transaction): boolean {
+  return tx.id.startsWith('temp-');
+}
+
+/** In-flight create requests — awaited before refetch so History stays in sync. */
+let pendingCreates: Promise<unknown>[] = [];
+
+async function flushPendingCreates(): Promise<void> {
+  const snackbar = useUiStore.getState().snackbar;
+  if (snackbar?.onDismiss) {
+    snackbar.onDismiss();
+    useUiStore.getState().hideSnackbar();
+  }
+
+  if (pendingCreates.length === 0) {
+    return;
+  }
+
+  await Promise.allSettled([...pendingCreates]);
+}
 
 type TransactionsState = {
   balance: number;
@@ -18,6 +48,7 @@ type TransactionsState = {
   error: string | null;
   fetchTransactions: () => Promise<void>;
   addTransaction: (input: CreateTransactionInput) => void;
+  clearTransactions: () => Promise<void>;
 };
 
 export const useTransactionsStore = create<TransactionsState>((set, get) => ({
@@ -29,10 +60,22 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
   fetchTransactions: async () => {
     set({ status: 'loading', error: null });
     try {
+      await flushPendingCreates();
+
       const data = await fetchTransactions();
+      const serverTransactions = data.transactions.map(withCurrency);
+
+      // Keep any optimistic rows that still have not been replaced.
+      const pending = get().transactions.filter(isPendingTemp);
+      const pendingBalance = pending.reduce(
+        (sum, tx) =>
+          sum + convertAmount(tx.amount, tx.currency, DEFAULT_CURRENCY),
+        0,
+      );
+
       set({
-        balance: data.balance,
-        transactions: data.transactions,
+        balance: data.balance + pendingBalance,
+        transactions: [...pending, ...serverTransactions],
         status: 'ready',
         error: null,
       });
@@ -51,11 +94,15 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
       return;
     }
 
+    const currency = isCurrency(input.currency)
+      ? input.currency
+      : DEFAULT_CURRENCY;
     const tempId = `temp-${Date.now()}`;
     const optimistic: Transaction = {
       id: tempId,
       userId: user.id,
       amount: input.amount,
+      currency,
       category: input.category,
       note: input.note?.trim() ?? '',
       date: input.date,
@@ -66,9 +113,14 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
       balance: get().balance,
       transactions: get().transactions,
     };
+    const converted = convertAmount(
+      input.amount,
+      currency,
+      DEFAULT_CURRENCY,
+    );
 
     set({
-      balance: previous.balance + input.amount,
+      balance: previous.balance + converted,
       transactions: [optimistic, ...previous.transactions],
       status: 'ready',
       error: null,
@@ -95,7 +147,7 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
       }
       committed = true;
 
-      createTransactionRequest(input)
+      const task = createTransactionRequest(input)
         .then(result => {
           if (undone) {
             return;
@@ -103,7 +155,7 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
           set(state => ({
             balance: result.balance,
             transactions: [
-              result.transaction,
+              withCurrency(result.transaction),
               ...state.transactions.filter(tx => tx.id !== tempId),
             ],
           }));
@@ -124,7 +176,12 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
             message,
             durationMs: 3000,
           });
+        })
+        .finally(() => {
+          pendingCreates = pendingCreates.filter(item => item !== task);
         });
+
+      pendingCreates.push(task);
     };
 
     useUiStore.getState().showSnackbar({
@@ -133,6 +190,16 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
       onAction: rollback,
       onDismiss: commit,
       durationMs: 4000,
+    });
+  },
+
+  clearTransactions: async () => {
+    await clearTransactionsRequest();
+    set({
+      balance: 0,
+      transactions: [],
+      status: 'ready',
+      error: null,
     });
   },
 }));

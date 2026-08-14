@@ -1,13 +1,30 @@
-const zar = new Intl.NumberFormat('en-ZA', {
-  style: 'currency',
-  currency: 'ZAR',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+import {
+  CURRENCY_META,
+  DEFAULT_CURRENCY,
+  type Currency,
+} from './currency';
 
-/** Signed amount for transaction rows, e.g. +R54.20 / -R12.50 */
-export function formatMoney(amount: number): string {
-  const formatted = zar.format(Math.abs(amount));
+const formatters = new Map<Currency, Intl.NumberFormat>();
+
+function formatterFor(currency: Currency): Intl.NumberFormat {
+  const existing = formatters.get(currency);
+  if (existing) {
+    return existing;
+  }
+  const formatter = new Intl.NumberFormat(CURRENCY_META[currency].locale, {
+    style: 'currency',
+    currency,
+  });
+  formatters.set(currency, formatter);
+  return formatter;
+}
+
+/** Signed amount for transaction rows, e.g. +R54.20 / -$12.50 */
+export function formatMoney(
+  amount: number,
+  currency: Currency = DEFAULT_CURRENCY,
+): string {
+  const formatted = formatterFor(currency).format(Math.abs(amount));
   if (amount < 0) {
     return `-${formatted}`;
   }
@@ -18,9 +35,13 @@ export function formatMoney(amount: number): string {
 }
 
 /** Absolute balance display (no leading +). */
-export function formatBalance(amount: number): string {
+export function formatBalance(
+  amount: number,
+  currency: Currency = DEFAULT_CURRENCY,
+): string {
+  const formatted = formatterFor(currency).format(Math.abs(amount));
   if (amount < 0) {
-    return `-${zar.format(Math.abs(amount))}`;
+    return `-${formatted}`;
   }
-  return zar.format(amount);
+  return formatterFor(currency).format(amount);
 }

@@ -1,4 +1,5 @@
 import { TRANSACTION_CATEGORIES } from '../data/transactions';
+import { SUPPORTED_CURRENCIES } from '../lib/currency';
 
 const errorSchema = {
   type: 'object',
@@ -31,6 +32,7 @@ const transactionSchema = {
     'id',
     'userId',
     'amount',
+    'currency',
     'category',
     'note',
     'date',
@@ -43,6 +45,11 @@ const transactionSchema = {
       type: 'number',
       description: 'Signed amount: positive = income, negative = expense',
       example: -54.2,
+    },
+    currency: {
+      type: 'string',
+      enum: [...SUPPORTED_CURRENCIES],
+      example: 'ZAR',
     },
     category: {
       type: 'string',
@@ -76,6 +83,7 @@ export const openApiDocument = {
     { name: 'Health' },
     { name: 'Auth' },
     { name: 'Profile' },
+    { name: 'Jokes' },
     { name: 'Transactions' },
   ],
   components: {
@@ -89,6 +97,23 @@ export const openApiDocument = {
     schemas: {
       Error: errorSchema,
       User: userSchema,
+      FinanceJoke: {
+        type: 'object',
+        required: ['setup', 'punchline', 'source'],
+        properties: {
+          setup: { type: 'string', example: 'Why did the rand go to therapy?' },
+          punchline: {
+            type: 'string',
+            example: 'It had too many exchange issues.',
+          },
+          source: {
+            type: 'string',
+            enum: ['api', 'local'],
+            description:
+              '`api` = icanhazdadjoke money search; `local` = BudgetPal fallback',
+          },
+        },
+      },
       Transaction: transactionSchema,
       AuthResponse: {
         type: 'object',
@@ -136,6 +161,12 @@ export const openApiDocument = {
             type: 'number',
             description: 'Non-zero signed amount',
             example: -12.5,
+          },
+          currency: {
+            type: 'string',
+            enum: [...SUPPORTED_CURRENCIES],
+            description: 'ISO 4217 currency code. Defaults to ZAR.',
+            example: 'ZAR',
           },
           category: {
             type: 'string',
@@ -278,11 +309,69 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/jokes': {
+      get: {
+        tags: ['Jokes'],
+        summary: 'Get a finance joke',
+        description:
+          'Returns a money-themed dad joke (icanhazdadjoke search term=money), with local BudgetPal fallbacks. Without `random`, picks a stable joke for the calendar day.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'random',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'boolean',
+              default: false,
+            },
+            description: 'If true, pick a random joke instead of the daily one',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'A finance joke',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['joke'],
+                  properties: {
+                    joke: { $ref: '#/components/schemas/FinanceJoke' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/api/transactions': {
       get: {
         tags: ['Transactions'],
         summary: 'List transactions',
         security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'currency',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: [...SUPPORTED_CURRENCIES],
+            },
+            description:
+              'Convert the headline `balance` into this currency. Defaults to ZAR.',
+          },
+        ],
         responses: {
           '200': {
             description: 'Balance and transactions for the current user',
@@ -290,9 +379,33 @@ export const openApiDocument = {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['balance', 'transactions'],
+                  required: ['balance', 'currency', 'balances', 'transactions'],
                   properties: {
-                    balance: { type: 'number', example: 1927.3 },
+                    balance: {
+                      type: 'number',
+                      description:
+                        'All transactions converted into `currency` using static FX rates',
+                      example: 1927.3,
+                    },
+                    currency: {
+                      type: 'string',
+                      enum: [...SUPPORTED_CURRENCIES],
+                      example: 'ZAR',
+                    },
+                    balances: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        required: ['currency', 'amount'],
+                        properties: {
+                          currency: {
+                            type: 'string',
+                            enum: [...SUPPORTED_CURRENCIES],
+                          },
+                          amount: { type: 'number' },
+                        },
+                      },
+                    },
                     transactions: {
                       type: 'array',
                       items: { $ref: '#/components/schemas/Transaction' },
@@ -334,7 +447,10 @@ export const openApiDocument = {
                   required: ['transaction', 'balance'],
                   properties: {
                     transaction: { $ref: '#/components/schemas/Transaction' },
-                    balance: { type: 'number' },
+                    balance: {
+                      type: 'number',
+                      description: 'All transactions converted to ZAR',
+                    },
                   },
                 },
               },
@@ -345,6 +461,40 @@ export const openApiDocument = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        tags: ['Transactions'],
+        summary: 'Clear all transactions',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'All transactions for the current user were deleted',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['deleted', 'balance', 'transactions'],
+                  properties: {
+                    deleted: { type: 'number', example: 6 },
+                    balance: { type: 'number', example: 0 },
+                    transactions: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Transaction' },
+                    },
+                  },
+                },
               },
             },
           },

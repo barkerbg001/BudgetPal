@@ -4,6 +4,7 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   Dashboard: undefined;
+  History: undefined;
   AddTransaction: undefined;
   Settings: undefined;
 };
