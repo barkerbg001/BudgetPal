@@ -83,6 +83,7 @@ export const openApiDocument = {
     { name: 'Health' },
     { name: 'Auth' },
     { name: 'Profile' },
+    { name: 'Jokes' },
     { name: 'Transactions' },
   ],
   components: {
@@ -96,6 +97,23 @@ export const openApiDocument = {
     schemas: {
       Error: errorSchema,
       User: userSchema,
+      FinanceJoke: {
+        type: 'object',
+        required: ['setup', 'punchline', 'source'],
+        properties: {
+          setup: { type: 'string', example: 'Why did the rand go to therapy?' },
+          punchline: {
+            type: 'string',
+            example: 'It had too many exchange issues.',
+          },
+          source: {
+            type: 'string',
+            enum: ['api', 'local'],
+            description:
+              '`api` = icanhazdadjoke money search; `local` = BudgetPal fallback',
+          },
+        },
+      },
       Transaction: transactionSchema,
       AuthResponse: {
         type: 'object',
@@ -275,6 +293,51 @@ export const openApiDocument = {
                   required: ['user'],
                   properties: {
                     user: { $ref: '#/components/schemas/User' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/jokes': {
+      get: {
+        tags: ['Jokes'],
+        summary: 'Get a finance joke',
+        description:
+          'Returns a money-themed dad joke (icanhazdadjoke search term=money), with local BudgetPal fallbacks. Without `random`, picks a stable joke for the calendar day.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'random',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'boolean',
+              default: false,
+            },
+            description: 'If true, pick a random joke instead of the daily one',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'A finance joke',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['joke'],
+                  properties: {
+                    joke: { $ref: '#/components/schemas/FinanceJoke' },
                   },
                 },
               },

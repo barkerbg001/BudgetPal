@@ -73,6 +73,16 @@ export type CreateTransactionResponse = {
   balance: number;
 };
 
+export type FinanceJoke = {
+  setup: string;
+  punchline: string;
+  source: 'api' | 'local';
+};
+
+export type JokeResponse = {
+  joke: FinanceJoke;
+};
+
 export type ApiErrorBody = {
   error: {
     message: string;
