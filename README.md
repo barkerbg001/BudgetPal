@@ -134,7 +134,7 @@ On push/PR to `main`, GitHub Actions runs:
 
 1. Lint (API + app)
 2. Jest tests
-3. Android `assembleDebug`
+3. Android `assembleDebug` → uploads `budgetpal-debug-apk` as a workflow artifact (14-day retention)
 
 Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
