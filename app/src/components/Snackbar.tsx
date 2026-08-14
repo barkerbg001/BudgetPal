@@ -63,7 +63,7 @@ export function Snackbar({ colors }: Props) {
         styles.wrap,
         {
           opacity,
-          bottom: Math.max(insets.bottom, 12) + 8,
+          top: Math.max(insets.top, 12) + 8,
         },
       ]}>
       <View

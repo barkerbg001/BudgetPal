@@ -1,3 +1,7 @@
+import type { Currency } from '../utils/currency';
+
+export type { Currency };
+
 export type User = {
   id: string;
   email: string;
@@ -37,6 +41,7 @@ export type Transaction = {
   id: string;
   userId: string;
   amount: number;
+  currency: Currency;
   category: TransactionCategory;
   note: string;
   date: string;
@@ -45,13 +50,21 @@ export type Transaction = {
 
 export type CreateTransactionInput = {
   amount: number;
+  currency: Currency;
   category: TransactionCategory;
   note?: string;
   date: string;
 };
 
+export type CurrencyBalance = {
+  currency: Currency;
+  amount: number;
+};
+
 export type TransactionsResponse = {
   balance: number;
+  currency: Currency;
+  balances: CurrencyBalance[];
   transactions: Transaction[];
 };
 

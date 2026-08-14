@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
 import { useUiStore } from '../store/uiStore';
+import { convertAmount } from '../utils/currency';
 
 type Props = {
   balance: number;
@@ -13,12 +14,19 @@ type Props = {
  */
 export function GoalConfetti({ balance }: Props) {
   const savingsGoal = useUiStore(state => state.savingsGoal);
+  const savingsGoalCurrency = useUiStore(state => state.savingsGoalCurrency);
+  const displayCurrency = useUiStore(state => state.displayCurrency);
   const showSnackbar = useUiStore(state => state.showSnackbar);
   const wasBelowGoal = useRef<boolean | null>(null);
   const cannonRef = useRef<ConfettiCannon | null>(null);
 
   useEffect(() => {
-    const isBelow = balance < savingsGoal;
+    const goal = convertAmount(
+      savingsGoal,
+      savingsGoalCurrency,
+      displayCurrency,
+    );
+    const isBelow = balance < goal;
 
     if (wasBelowGoal.current === true && !isBelow) {
       cannonRef.current?.start();
@@ -29,7 +37,13 @@ export function GoalConfetti({ balance }: Props) {
     }
 
     wasBelowGoal.current = isBelow;
-  }, [balance, savingsGoal, showSnackbar]);
+  }, [
+    balance,
+    displayCurrency,
+    savingsGoal,
+    savingsGoalCurrency,
+    showSnackbar,
+  ]);
 
   return (
     <View pointerEvents="none" style={styles.layer}>

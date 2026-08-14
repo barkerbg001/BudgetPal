@@ -4,6 +4,7 @@ import type {
   AuthResponse,
   CreateTransactionInput,
   CreateTransactionResponse,
+  Transaction,
   TransactionsResponse,
   User,
 } from '../types/api';
@@ -108,5 +109,15 @@ export function createTransactionRequest(
   return apiRequest<CreateTransactionResponse>('/transactions', {
     method: 'POST',
     body: input,
+  });
+}
+
+export function clearTransactionsRequest(): Promise<{
+  deleted: number;
+  balance: number;
+  transactions: Transaction[];
+}> {
+  return apiRequest('/transactions', {
+    method: 'DELETE',
   });
 }

@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
+import {
+  DEFAULT_CURRENCY,
+  convertAmount,
+  type Currency,
+} from '../lib/currency';
+
 export const TRANSACTION_CATEGORIES = [
   'income',
   'housing',
@@ -18,10 +24,16 @@ export type Transaction = {
   id: string;
   userId: string;
   amount: number;
+  currency: Currency;
   category: TransactionCategory;
   note: string;
   date: string;
   createdAt: string;
+};
+
+export type CurrencyBalance = {
+  currency: Currency;
+  amount: number;
 };
 
 const transactions: Transaction[] = [];
@@ -38,13 +50,31 @@ export function listTransactionsForUser(userId: string): Transaction[] {
     });
 }
 
-export function getBalanceForUser(userId: string): number {
-  return listTransactionsForUser(userId).reduce((sum, tx) => sum + tx.amount, 0);
+export function getBalancesForUser(userId: string): CurrencyBalance[] {
+  const totals = new Map<Currency, number>();
+  for (const tx of listTransactionsForUser(userId)) {
+    totals.set(tx.currency, (totals.get(tx.currency) ?? 0) + tx.amount);
+  }
+  return [...totals.entries()].map(([currency, amount]) => ({
+    currency,
+    amount,
+  }));
+}
+
+export function getBalanceForUser(
+  userId: string,
+  currency: Currency = DEFAULT_CURRENCY,
+): number {
+  return listTransactionsForUser(userId).reduce(
+    (sum, tx) => sum + convertAmount(tx.amount, tx.currency, currency),
+    0,
+  );
 }
 
 export function createTransaction(input: {
   userId: string;
   amount: number;
+  currency?: Currency;
   category: TransactionCategory;
   note: string;
   date: string;
@@ -53,6 +83,7 @@ export function createTransaction(input: {
     id: randomUUID(),
     userId: input.userId,
     amount: input.amount,
+    currency: input.currency ?? DEFAULT_CURRENCY,
     category: input.category,
     note: input.note,
     date: input.date,
@@ -60,6 +91,21 @@ export function createTransaction(input: {
   };
   transactions.push(transaction);
   return transaction;
+}
+
+export function clearTransactionsForUser(userId: string): number {
+  const remaining: Transaction[] = [];
+  let deleted = 0;
+  for (const tx of transactions) {
+    if (tx.userId === userId) {
+      deleted += 1;
+    } else {
+      remaining.push(tx);
+    }
+  }
+  transactions.length = 0;
+  transactions.push(...remaining);
+  return deleted;
 }
 
 export function seedTransactionsForUser(userId: string): void {
@@ -102,5 +148,21 @@ export function seedTransactionsForUser(userId: string): void {
     category: 'transport',
     note: 'Transit pass top-up',
     date: isoDay(0),
+  });
+  createTransaction({
+    userId,
+    amount: 250,
+    currency: 'USD',
+    category: 'income',
+    note: 'Freelance invoice',
+    date: isoDay(4),
+  });
+  createTransaction({
+    userId,
+    amount: -12.5,
+    currency: 'EUR',
+    category: 'food',
+    note: 'Airport coffee',
+    date: isoDay(1),
   });
 }

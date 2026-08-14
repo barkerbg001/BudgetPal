@@ -10,12 +10,16 @@ import { Laugh, RefreshCw } from 'lucide-react-native';
 
 import { fetchFinanceJoke, type FinanceJoke } from '../api/jokes';
 import type { ThemeColors } from '../theme/colors';
+import { getCardShadow } from '../theme/shadows';
+import { useAppTheme } from '../theme/useAppTheme';
 
 type Props = {
   colors: ThemeColors;
+  compact?: boolean;
 };
 
-export function FinanceJokeCard({ colors }: Props) {
+export function FinanceJokeCard({ colors, compact = false }: Props) {
+  const { isDark } = useAppTheme();
   const [joke, setJoke] = useState<FinanceJoke | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +40,55 @@ export function FinanceJokeCard({ colors }: Props) {
   useEffect(() => {
     loadJoke(false).catch(() => undefined);
   }, [loadJoke]);
+
+  if (compact) {
+    const line = joke
+      ? joke.punchline
+        ? `${joke.setup} ${joke.punchline}`
+        : joke.setup
+      : null;
+
+    return (
+      <View
+        style={[
+          styles.compactCard,
+          getCardShadow(isDark),
+          { backgroundColor: colors.card },
+        ]}>
+        <Laugh color={colors.accent} size={16} />
+        <View style={styles.compactBody}>
+          {loading && !joke ? (
+            <ActivityIndicator color={colors.accent} size="small" />
+          ) : null}
+          {error && !joke ? (
+            <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
+          ) : null}
+          {line ? (
+            <Text
+              style={[styles.compactText, { color: colors.muted }]}
+              numberOfLines={2}>
+              {line}
+            </Text>
+          ) : null}
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Load another joke"
+          onPress={() => {
+            loadJoke(true).catch(() => undefined);
+          }}
+          hitSlop={8}
+          disabled={loading}
+          style={styles.refresh}>
+          <RefreshCw
+            color={colors.muted}
+            size={15}
+            style={loading ? styles.spinning : undefined}
+          />
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -79,12 +132,18 @@ export function FinanceJokeCard({ colors }: Props) {
 
       {joke ? (
         <View style={styles.body}>
-          <Text style={[styles.setup, { color: colors.text }]}>{joke.setup}</Text>
-          <Text style={[styles.punchline, { color: colors.accent }]}>
-            {joke.punchline}
+          <Text style={[styles.setup, { color: colors.text }]}>
+            {joke.setup}
           </Text>
+          {joke.punchline ? (
+            <Text style={[styles.punchline, { color: colors.accent }]}>
+              {joke.punchline}
+            </Text>
+          ) : null}
           <Text style={[styles.source, { color: colors.muted }]}>
-            {joke.source === 'api' ? 'via JokeAPI' : 'BudgetPal classic'}
+            {joke.source === 'api'
+              ? 'via icanhazdadjoke'
+              : 'BudgetPal classic'}
           </Text>
         </View>
       ) : null}
@@ -99,6 +158,22 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 16,
     gap: 10,
+  },
+  compactCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+  },
+  compactBody: {
+    flex: 1,
+  },
+  compactText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   header: {
     flexDirection: 'row',

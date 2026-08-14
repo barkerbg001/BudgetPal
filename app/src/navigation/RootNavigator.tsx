@@ -9,6 +9,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Snackbar } from '../components/Snackbar';
 import { AddTransactionScreen } from '../screens/AddTransactionScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
+import { HistoryScreen } from '../screens/HistoryScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { useAuthStore } from '../store/authStore';
@@ -30,7 +31,16 @@ function MainNavigator() {
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="Dashboard" component={DashboardScreen} />
-      <AppStack.Screen name="AddTransaction" component={AddTransactionScreen} />
+      <AppStack.Screen name="History" component={HistoryScreen} />
+      <AppStack.Screen
+        name="AddTransaction"
+        component={AddTransactionScreen}
+        options={{
+          presentation: 'transparentModal',
+          animation: 'none',
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      />
       <AppStack.Screen name="Settings" component={SettingsScreen} />
     </AppStack.Navigator>
   );
